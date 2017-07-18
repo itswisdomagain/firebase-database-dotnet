@@ -16,6 +16,7 @@
             this.OfflineDatabaseFactory = (t, s) => new Dictionary<string, OfflineEntry>();
             this.SubscriptionStreamReaderFactory = s => new StreamReader(s);
             this.JsonSerializerSettings = new JsonSerializerSettings();
+            this.SyncPeriod = TimeSpan.FromSeconds(10);
         }
 
         /// <summary>
@@ -49,6 +50,24 @@
         /// Gets or sets the json serializer settings.
         /// </summary>
         public JsonSerializerSettings JsonSerializerSettings
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the time between synchronization attempts for pulling and pushing offline entities. Default is 10 seconds.
+        /// </summary>
+        public TimeSpan SyncPeriod
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Specify if token returned by factory will be used as "auth" url parameter or "access_token". 
+        /// </summary>
+        public bool AsAccessToken
         {
             get;
             set;

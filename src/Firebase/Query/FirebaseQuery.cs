@@ -11,6 +11,7 @@ namespace Firebase.Database.Query
     using Firebase.Database.Streaming;
 
     using Newtonsoft.Json;
+    using System.Net;
 
     /// <summary>
     /// Represents a firebase query. 
@@ -62,10 +63,12 @@ namespace Firebase.Database.Query
         {
             var path = await this.BuildUrlAsync().ConfigureAwait(false);
             var responseData = string.Empty;
+            var statusCode = HttpStatusCode.OK;
 
             try
             {
                 var response = await this.GetClient().GetAsync(path).ConfigureAwait(false);
+                statusCode = response.StatusCode;
                 responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
@@ -74,7 +77,7 @@ namespace Firebase.Database.Query
             }
             catch(Exception ex)
             {
-                throw new FirebaseException(path, string.Empty, responseData, ex);
+                throw new FirebaseException(path, string.Empty, responseData, statusCode, ex);
             }
         }
 
@@ -117,23 +120,23 @@ namespace Firebase.Database.Query
         /// <param name="generateKeyOffline"> Specifies whether the key should be generated offline instead of online. </param> 
         /// <typeparam name="T"> Type of <see cref="obj"/> </typeparam>
         /// <returns> Resulting firebase object with populated key. </returns>
-        public async Task<FirebaseObject<T>> PostAsync<T>(T obj, bool generateKeyOffline = true)
+        public async Task<FirebaseObject<string>> PostAsync(string data, bool generateKeyOffline = true)
         {
             // post generates a new key server-side, while put can be used with an already generated local key
             if (generateKeyOffline)
             {
                 var key = FirebaseKeyGenerator.Next();
-                await new ChildQuery(this, () => key, this.Client).PutAsync(obj).ConfigureAwait(false);
+                await new ChildQuery(this, () => key, this.Client).PutAsync(data).ConfigureAwait(false);
 
-                return new FirebaseObject<T>(key, obj);
+                return new FirebaseObject<string>(key, data);
             }
             else
             {
                 var c = this.GetClient();
-                var data = await this.SendAsync(c, obj, HttpMethod.Post).ConfigureAwait(false);
-                var result = JsonConvert.DeserializeObject<PostResult>(data);
+                var sendData = await this.SendAsync(c, data, HttpMethod.Post).ConfigureAwait(false);
+                var result = JsonConvert.DeserializeObject<PostResult>(sendData);
 
-                return new FirebaseObject<T>(result.Name, obj);
+                return new FirebaseObject<string>(result.Name, data);
             }
         }
 
@@ -143,11 +146,11 @@ namespace Firebase.Database.Query
         /// <param name="obj"> The object. </param>  
         /// <typeparam name="T"> Type of <see cref="obj"/> </typeparam>
         /// <returns> The <see cref="Task"/>. </returns>
-        public async Task PatchAsync<T>(T obj)
+        public async Task PatchAsync(string data)
         {
             var c = this.GetClient();
 
-            await this.SendAsync(c, obj, new HttpMethod("PATCH")).ConfigureAwait(false);
+            await this.SendAsync(c, data, new HttpMethod("PATCH")).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -156,11 +159,11 @@ namespace Firebase.Database.Query
         /// <param name="obj"> The object. </param>  
         /// <typeparam name="T"> Type of <see cref="obj"/> </typeparam>
         /// <returns> The <see cref="Task"/>. </returns>
-        public async Task PutAsync<T>(T obj)
+        public async Task PutAsync(string data)
         {
             var c = this.GetClient();
 
-            await this.SendAsync(c, obj, HttpMethod.Put).ConfigureAwait(false);
+            await this.SendAsync(c, data, HttpMethod.Put).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -172,17 +175,19 @@ namespace Firebase.Database.Query
             var c = this.GetClient();
             var url = await this.BuildUrlAsync().ConfigureAwait(false);
             var responseData = string.Empty;
+            var statusCode = HttpStatusCode.OK;
 
             try
             {
                 var result = await c.DeleteAsync(url).ConfigureAwait(false);
+                statusCode = result.StatusCode;
                 responseData = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 result.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
-                throw new FirebaseException(url, string.Empty, responseData, ex);
+                throw new FirebaseException(url, string.Empty, responseData, statusCode, ex);
             }
         }
 
@@ -223,20 +228,22 @@ namespace Firebase.Database.Query
             return this.client;
         }
 
-        private async Task<string> SendAsync<T>(HttpClient client, T obj, HttpMethod method)
+        private async Task<string> SendAsync(HttpClient client, string data, HttpMethod method)
         {
             var url = await this.BuildUrlAsync().ConfigureAwait(false);
-            var requestData = JsonConvert.SerializeObject(obj, this.Client.Options.JsonSerializerSettings);
+            var requestData = data;
             var message = new HttpRequestMessage(method, url)
             {
                 Content = new StringContent(requestData)
             };
 
             var responseData = string.Empty;
+            var statusCode = HttpStatusCode.OK;
 
             try
             {
                 var result = await client.SendAsync(message).ConfigureAwait(false);
+                statusCode = result.StatusCode;
                 responseData = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 result.EnsureSuccessStatusCode();
@@ -245,7 +252,7 @@ namespace Firebase.Database.Query
             }
             catch(Exception ex)
             {
-                throw new FirebaseException(url, requestData, responseData, ex);
+                throw new FirebaseException(url, requestData, responseData, statusCode, ex);
             }
         }
     }

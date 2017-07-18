@@ -176,6 +176,36 @@
             entities.Should().HaveCount(1);
             entities.First().ShouldBeEquivalentTo(jurassicPrague);
             jurassicPrague.Object.Dinosaurs["stegosaurus"].Dimensions.ShouldBeEquivalentTo(new Dimensions { Height = 4, Length = 4, Weight = 4 });
+
+            //var entities = cache.PushData("/jurassicPrague/dinosaurs/stegosaurus/Name", "").ToList();
+        }
+
+        [TestMethod]
+        public void NestedDictionaryChanged()
+        {
+            var jurassicPrague = new FirebaseObject<JurassicWorld>("jurassicPrague", new JurassicWorld());
+            jurassicPrague.Object.Dinosaurs.Add("lambeosaurus", new Dinosaur(2, 2, 2));
+            jurassicPrague.Object.Dinosaurs.Add("stegosaurus", new Dinosaur(3, 3, 3));
+
+            var cache = new FirebaseCache<JurassicWorld>(new Dictionary<string, JurassicWorld>()
+                { { jurassicPrague.Key, jurassicPrague.Object } }
+            );
+
+            var trex = @"
+{
+    ""trex"": {
+        ""ds"": {
+            ""height"" : 5,
+            ""length"" : 4,
+            ""weight"": 4
+        }
+    }
+}";
+            var entities = cache.PushData("/jurassicPrague/dinosaurs/", trex).ToList();
+
+            entities.Should().HaveCount(1);
+            entities.First().ShouldBeEquivalentTo(jurassicPrague);
+            jurassicPrague.Object.Dinosaurs["trex"].Dimensions.ShouldBeEquivalentTo(new Dimensions { Height = 5, Length = 4, Weight = 4 });
         }
 
         [TestMethod]
@@ -314,6 +344,43 @@
                 ["a"] = "aaa",
                 ["b"] = "bb",
             }));
+        }
+
+
+
+        [TestMethod]
+        public void InitialPushOfEntireArrayToEmptyCache()
+        {
+            // Data that looks like an array will be returned as an array (without keys).
+            // https://firebase.googleblog.com/2014/04/best-practices-arrays-in-firebase.html
+
+            // this should simulate first time connection is made and all data is returned in a batch in a form of a dictionary
+            var cache = new FirebaseCache<Dinosaur>();
+            var dinosaurs = @"[
+  {
+    ""ds"": {
+      ""height"" : 2,
+      ""length"" : 2,
+      ""weight"": 2
+    }
+  },
+  {
+    ""ds"": {
+      ""height"" : 3,
+      ""length"" : 3,
+      ""weight"" : 3
+    }
+  }
+]";
+
+            var entities = cache.PushData("/", dinosaurs).ToList();
+            var expectation = new[]
+            {
+                new FirebaseObject<Dinosaur>("0", new Dinosaur(2, 2, 2)),
+                new FirebaseObject<Dinosaur>("1", new Dinosaur(3, 3, 3))
+            };
+
+            entities.ShouldAllBeEquivalentTo(expectation);
         }
     }
 }

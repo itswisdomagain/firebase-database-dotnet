@@ -3,7 +3,9 @@
 
 Simple wrapper on top of [Firebase Realtime Database REST API](https://firebase.google.com/docs/database/). Among others it supports streaming API which you can use for realtime notifications.
 
-Authentication with Firebase tokens is also supported, checkout the [Firebase Authentication library](https://github.com/step-up-labs/firebase-authentication-dotnet) and related [blog post](http://blog.bezysoftware.net/firebase-authentication-csharp-library/)
+For Authenticating with Firebase checkout the [Firebase Authentication library](https://github.com/step-up-labs/firebase-authentication-dotnet) and related [blog post](https://medium.com/step-up-labs/firebase-authentication-c-library-8e5e1c30acc2)
+
+To upload files to Firebase Storage checkout the [Firebase Storage library](https://github.com/step-up-labs/firebase-storage-dotnet) and related [blog post](https://medium.com/step-up-labs/firebase-storage-c-library-d1656cc8b3c3)
 
 ## Installation
 ```csharp
@@ -15,11 +17,7 @@ Install-Package FirebaseDatabase.net -pre
 ```
 
 ## Supported frameworks
-* .NET 4.5+
-* Windows 8.x
-* UWP
-* Windows Phone 8.1
-* CoreCLR
+.NET Standard 1.1 - see https://github.com/dotnet/standard/blob/master/docs/versions.md for compatibility matrix
 
 ## Usage
 
@@ -40,7 +38,6 @@ var firebaseClient = new FirebaseClient(
 Note that using app secret can only be done for server-side scenarios. Otherwise you should use some sort of third-party login. 
 
 ```
-var auth = "ABCDE"; // your app secret
 var firebaseClient = new FirebaseClient(
   "<URL>",
   new FirebaseOptions
@@ -78,7 +75,7 @@ foreach (var dino in dinos)
 }
 ```
 
-### Saving data
+### Saving & deleting data
 
 ```csharp
 var firebase = new FirebaseClient("https://dinosaur-facts.firebaseio.com/");
@@ -93,11 +90,16 @@ var dino = await firebase
 Console.WriteLine($"Key for the new dinosaur: {dino.Key}");  
 
 // add new item directly to the specified location (this will overwrite whatever data already exists at that location)
-var dino = await firebase
+await firebase
   .Child("dinosaurs")
   .Child("t-rex")
   .PutAsync(new Dinosaur());
 
+// delete given child node
+await firebase
+  .Child("dinosaurs")
+  .Child("t-rex")
+  .DeleteAsync();
 ```
 
 ### Realtime streaming
